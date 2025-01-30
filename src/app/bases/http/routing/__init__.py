@@ -1,0 +1,1 @@
+from .static_response_type_route import AbstractStaticResponseTypeApiRoute

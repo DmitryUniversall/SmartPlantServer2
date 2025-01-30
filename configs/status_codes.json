@@ -1,0 +1,95 @@
+{
+    "APPLICATION_STATUS_CODES": {
+        "NOT_SPECIFIED": 0,
+        "GENERICS": {
+            "SUCCESS": {
+                "application_status_code": 1000,
+                "message": "Success"
+            },
+            "CREATED": {
+                "application_status_code": 1001,
+                "message": "Created"
+            },
+            "UPDATED": {
+                "application_status_code": 1002,
+                "message": "Updated"
+            },
+            "NOT_CHANGED": {
+                "application_status_code": 1003,
+                "message": "Not changed"
+            }
+        },
+        "GENERIC_ERRORS": {
+            "INTERNAL_SERVER_ERROR": {
+                "application_status_code": 2000,
+                "message": "Internal server error"
+            },
+            "ALREADY_EXISTS": {
+                "application_status_code": 2001,
+                "message": "Already exists"
+            },
+            "NOT_FOUND": {
+                "application_status_code": 2002,
+                "message": "Not found"
+            },
+            "UNPROCESSABLE_ENTITY": {
+                "application_status_code": 2003,
+                "message": "Unprocessable entity"
+            },
+            "TIME_OUT": {
+                "application_status_code": 2004,
+                "message": "Time out"
+            },
+            "BAD_REQUEST": {
+                "application_status_code": 2005,
+                "message": "Bad request"
+            },
+            "FORBIDDEN": {
+                "application_status_code": 2006,
+                "message": "Forbidden"
+            },
+            "OPERATION_CANCELLED": {
+                "application_status_code": 2007,
+                "message": "Operation cancelled"
+            }
+        },
+        "AUTH": {
+            "AUTHORIZATION_NOT_SPECIFIED": {
+                "application_status_code": 3001,
+                "message": "Authorization was not specified"
+            },
+            "AUTHORIZATION_INVALID": {
+                "application_status_code": 3002,
+                "message": "Invalid authorization"
+            },
+            "AUTHORIZATION_TYPE_UNKNOWN": {
+                "application_status_code": 3003,
+                "message": "Unknown authorization type"
+            },
+            "TOKEN_NOT_SPECIFIED": {
+                "application_status_code": 3004,
+                "message": "Authorization token was not specified"
+            },
+            "TOKEN_EXPIRED": {
+                "application_status_code": 3005,
+                "message": "Authorization token is expired"
+            },
+            "TOKEN_INVALID": {
+                "application_status_code": 3006,
+                "message": "Authorization token is invalid"
+            },
+            "TOKEN_VALIDATION_FAILED": {
+                "application_status_code": 3007,
+                "message": "Authorization token validation failed"
+            },
+            "UNKNOWN_USER": {
+                "application_status_code": 3008,
+                "message": "Invalid authorization token payload: User not found"
+            },
+            "WRONG_AUTH_CREDENTIALS": {
+                "application_status_code": 3009,
+                "message": "Wrong authentication credentials"
+            }
+        }
+    }
+}
