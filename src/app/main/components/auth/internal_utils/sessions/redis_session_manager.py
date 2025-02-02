@@ -32,7 +32,6 @@ _user_resource = UserResourceST()
 
 
 class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=ABCSingletonMeta):
-    # TODO: Can i use project_settings here?
     AUTH_USER_DATA_REDIS_KEY: str = project_settings.AUTH_REDIS_KEY + ":user:{}"
     AUTH_USER_SESSIONS_REDIS_KEY: str = AUTH_USER_DATA_REDIS_KEY + ":sessions"
     AUTH_USER_SESSION_REDIS_KEY: str = AUTH_USER_SESSIONS_REDIS_KEY + ":{}"

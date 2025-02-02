@@ -10,7 +10,6 @@ class AbstractErrorHandler[_errorT: Exception](ABC):
     An abstract base class for handling errors asynchronously, defining a structure for custom error handlers.
     """
 
-    # FIXME: Add valid return type (like 'Callable[..., AbstractErrorHandler[_T]]')
     @classmethod
     def as_error_handler[_T: Exception](cls, exception_cls: type[_T], **init_kwargs) -> Callable:
         """
@@ -22,7 +21,7 @@ class AbstractErrorHandler[_errorT: Exception](ABC):
         :param init_kwargs: `dict`
             Additional initialization arguments for the handler class.
 
-        :return: `Callable[..., AbstractErrorHandler[_T]]`
+        :return: `Callable`
             A decorator function that can be applied to a coroutine handler function.
         """
 

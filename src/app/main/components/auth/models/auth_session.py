@@ -7,9 +7,9 @@ from src.core.utils.types import UUIDString
 class AuthSessionInternal(BaseSchema):
     session_id: UUIDString
     user_id: int
-    access_token: str  # TODO: Store token_uuid instead of token itself
+    access_token: str
     refresh_token: str
-    session_name: str  # TODO: Validate session name (make it unique?)
+    session_name: str
     ip_address: str
     user_agent: str
     is_active: bool = True

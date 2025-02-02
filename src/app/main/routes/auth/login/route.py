@@ -3,6 +3,7 @@ from starlette.requests import Request
 from src.app.main.components.auth.models.auth_session import AuthSessionPrivate
 from src.app.main.components.auth.models.user import UserPrivate
 from src.app.main.components.auth.repository import AuthRepositoryST
+from src.app.main.exceptions import ForbiddenHTTPException
 from src.app.main.http import ApplicationJsonResponse, SuccessResponse
 from .schemas import LoginRequestPayload, LoginResponsePayload
 from ..router import auth_router
@@ -12,11 +13,13 @@ _auth_repository = AuthRepositoryST()
 
 @auth_router.post("/login/")
 async def login_route(payload: LoginRequestPayload, request: Request) -> ApplicationJsonResponse:
-    assert request.client is not None  # TODO: raise HttpException
+    if request.client is None:
+        raise ForbiddenHTTPException(message="Client is unknown")
 
     auth_info = await _auth_repository.login(
         ip_address=request.client.host,
         user_agent=request.headers.get("User-Agent", "unknown"),
+        session_name=f"",
         **payload.model_dump()
     )
 

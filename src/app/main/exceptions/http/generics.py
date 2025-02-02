@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from pydantic import ValidationError
+
 from src.app.main.models_global import ApplicationResponsePayload
 from src.core.state import project_settings
 from .generic_base import GenericApplicationHTTPException
@@ -54,8 +56,8 @@ class UnprocessableEntityHTTPException(GenericApplicationHTTPException):
 
 
 class SchemaValidationHTTPException(UnprocessableEntityHTTPException):
-    def __init__(self, validation_error: Exception | None = None, **kwargs) -> None:  # TODO: Better typing
-        self._validation_error: Exception | None = validation_error
+    def __init__(self, validation_error: ValidationError | None = None, **kwargs) -> None:
+        self._validation_error: ValidationError | None = validation_error
         super().__init__(**kwargs)
 
     def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:

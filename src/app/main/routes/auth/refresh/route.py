@@ -1,6 +1,7 @@
 from starlette.requests import Request
 
 from src.app.main.components.auth.repository import AuthRepositoryST
+from src.app.main.exceptions import ForbiddenHTTPException
 from src.app.main.http import ApplicationJsonResponse, SuccessResponse
 from .schemas import RefreshRequestPayload, RefreshResponsePayload
 from ..router import auth_router
@@ -10,7 +11,8 @@ _auth_repository = AuthRepositoryST()
 
 @auth_router.post("/refresh/")
 async def refresh_route(payload: RefreshRequestPayload, request: Request) -> ApplicationJsonResponse:
-    assert request.client is not None  # TODO: raise HttpException
+    if request.client is None:
+        raise ForbiddenHTTPException(message="Client is unknown")
 
     auth_info = await _auth_repository.refresh(
         current_client_ip=request.client.host,

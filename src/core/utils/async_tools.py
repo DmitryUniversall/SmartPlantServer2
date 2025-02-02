@@ -66,7 +66,6 @@ async def safe_wait_with_timeout[_T](
     """
 
     try:
-        # FIXME: Argument 1 to "wait_with_timeout" has incompatible type "Coroutine[Any, Any, _T] | Future[_T]"; expected "Coroutine[Any, Any, _T | None] | Future[_T | None]"
         return True, await wait_with_timeout(coro, timeout=timeout, shield=shield)  # type: ignore
     except asyncio.TimeoutError:
         return False, None
