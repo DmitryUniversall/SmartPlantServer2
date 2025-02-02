@@ -1,4 +1,3 @@
-from abc import ABCMeta
 from logging import getLogger
 from typing import Callable, AsyncContextManager, Generator, Any, Self
 
@@ -10,19 +9,12 @@ from src.app.bases.db import async_session_error_convert_wrapper
 from src.app.main.db.exceptions import error_mapping
 from src.core.exceptions import InitializationError
 from src.core.state import project_settings
-from src.core.utils.singleton import SingletonMeta
+from src.core.utils.singleton import ABCSingletonMeta
 
 _logger = getLogger(__name__)
 
 
-class _AsyncDatabaseManagerSTMeta(ABCMeta, SingletonMeta):
-    """
-    Metaclass combining `ABCMeta` and `SingletonMeta` for managing the singleton
-    and abstract base class behavior for `AsyncDatabaseManagerST`.
-    """
-
-
-class AsyncDatabaseManagerST(AbstractAsyncDatabaseManager, metaclass=_AsyncDatabaseManagerSTMeta):
+class AsyncDatabaseManagerST(AbstractAsyncDatabaseManager, metaclass=ABCSingletonMeta):
     """
     A singleton database manager for managing asynchronous database connections and sessions.
 

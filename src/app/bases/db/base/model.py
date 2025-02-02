@@ -103,7 +103,4 @@ class BaseModel[_schemaT: BaseSchema](Base, metaclass=CustomModelMeta):  # type:
             An instance of the Pydantic schema class.
         """
 
-        return scheme_cls.model_validate({  # parse_obj
-            **self.__dict__,
-            **fields
-        })
+        return scheme_cls.model_validate(self, from_attributes=True)

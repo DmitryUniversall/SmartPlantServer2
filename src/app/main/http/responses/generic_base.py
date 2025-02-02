@@ -61,7 +61,7 @@ class BaseGenericApplicationJsonResponse[_contentT: Any](ApplicationJsonResponse
         """
 
 
-class GenericApplicationJsonResponse(BaseGenericApplicationJsonResponse):
+class GenericApplicationJsonResponse[_contentT: Any](BaseGenericApplicationJsonResponse[_contentT]):
     """
     A concrete implementation of `BaseGenericApplicationJsonResponse` that generates
     a response with default status and payload based on class-level settings.

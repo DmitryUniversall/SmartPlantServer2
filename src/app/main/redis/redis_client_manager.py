@@ -1,5 +1,4 @@
 import logging
-from typing import Self, Generator, Any
 
 from redis import asyncio as aioredis
 
@@ -8,17 +7,10 @@ from src.core.state import project_settings
 _logger = logging.getLogger(__name__)
 
 
-class RedisClientManager:
+class RedisClientMixin:
     def __init__(self, db: int = 0) -> None:
         self._db: int = db
         self._redis: aioredis.client.Redis | None = None
-
-    def __await__(self) -> Generator[Any, None, Self]:
-        return self.initialize().__await__()
-
-    async def initialize(self) -> Self:
-        await self.get_redis()
-        return self
 
     async def _create_redis(self) -> aioredis.client.Redis:
         return await aioredis.from_url(

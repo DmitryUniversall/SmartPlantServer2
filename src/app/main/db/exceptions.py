@@ -6,5 +6,6 @@ class UniqueConstraintFailed(StatementError):
 
 
 error_mapping: dict[str, type[StatementError]] = {
-    'duplicate entry': UniqueConstraintFailed
+    'duplicate entry': UniqueConstraintFailed,
+    "UNIQUE constraint failed": UniqueConstraintFailed
 }

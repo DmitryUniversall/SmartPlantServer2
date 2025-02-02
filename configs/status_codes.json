@@ -89,6 +89,18 @@
             "WRONG_AUTH_CREDENTIALS": {
                 "application_status_code": 3009,
                 "message": "Wrong authentication credentials"
+            },
+            "INVALID_SESSION": {
+                "application_status_code": 3010,
+                "message": "Invalid session specified"
+            },
+            "INACTIVE_SESSION": {
+                "application_status_code": 3011,
+                "message": "This session is no more valid"
+            },
+            "SUSPICIOUS_ACTIVITY": {
+                "application_status_code": 3012,
+                "message": "Suspicious activity detected, this session is no more valid"
             }
         }
     }

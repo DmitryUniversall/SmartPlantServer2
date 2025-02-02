@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABC
 from functools import cached_property
-from typing import Any
+from typing import Any, Sequence
 
 import sqlalchemy
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, Result
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.bases.db import BaseModel
@@ -46,6 +46,74 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
 
         return getattr(self.__model_cls__, self.__model_cls__.__pk_field__)
 
+    async def _fetch_by(self, session: AsyncSession, fields: dict[str, Any]) -> Result[tuple[_modelT]]:
+        """
+        Fetches records from the database filtered by the given fields.
+
+        :param session: `AsyncSession`
+            The SQLAlchemy async session to execute the query.
+
+        :param fields: `dict[str, Any]`
+            (Optional) The fields used for filtering the query.
+            At least one filter parameter must be provided.
+
+        :return: `Result[tuple[_modelT]]`
+            The result of the executed query.
+
+        :raises:
+            :raise ValueError: If no filter parameters are provided.
+        """
+
+        if not fields:
+            raise ValueError("At least one filter parameter must be provided")
+
+        result = await session.execute(select(self.__model_cls__).filter_by(**fields))
+        return result
+
+    async def _fetch_one_by(self, session: AsyncSession, fields: dict[str, Any]) -> _modelT | None:
+        """
+        Fetches a single record from the database filtered by the given fields.
+        Performs db request
+
+        :param session: `AsyncSession`
+            The SQLAlchemy async session to execute the query.
+
+        :param fields: `dict[str, Any]`
+            (Optional) The fields used for filtering the query.
+            At least one filter parameter must be provided.
+
+        :return: `_modelT`
+            The first matching record, or `None` if no record is found.
+
+        :raises:
+            :raise ValueError: If no filter parameters are provided.
+        """
+
+        result = await self._fetch_by(session, fields)
+        return result.scalar_one_or_none()
+
+    async def _fetch_many_by(self, session: AsyncSession, fields: dict[str, Any]) -> Sequence[_modelT]:
+        """
+        Fetches multiple records from the database filtered by the given fields.
+        Performs db request
+
+        :param session: `AsyncSession`
+            The SQLAlchemy async session to execute the query.
+
+        :param fields: `dict[str, Any]`
+            (Optional) The fields used for filtering the query.
+            At least one filter parameter must be provided.
+
+        :return: `Sequence[_modelT]`
+            A list of matching records, or an empty list if no records are found.
+
+        :raises:
+            :raise ValueError: If no filter parameters are provided.
+        """
+
+        result = await self._fetch_by(session, fields)
+        return result.scalars().all()
+
     async def _fetch_by_pk(self, session: AsyncSession, pk: _pkT) -> _modelT:
         """
         Fetch a model object by its pk. Performs db request
@@ -68,7 +136,6 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
         if (fetched := result.scalar_one_or_none()) is None:
             raise self.__model_cls__.DoesNotExist(f"Not found {self.__model_cls__.__name__} with pk={pk}")
 
-        await session.commit()
         return fetched
 
     async def _delete_by_pk(self, session: AsyncSession, pk: _pkT) -> _modelT:
@@ -236,3 +303,39 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
 
         async with self.__db_manager__.transaction() as session:
             return await self._update_by_pk(session, pk, **fields)
+
+    async def get_one_by(self, **fields) -> _modelT | None:
+        """
+        Fetches a single record from the database filtered by the given fields.
+
+        :param fields: `dict[str, Any]`
+            (Optional) The fields used for filtering the query.
+            At least one filter parameter must be provided.
+
+        :return: `_modelT`
+            The first matching record, or `None` if no record is found.
+
+        :raises:
+            :raise ValueError: If no filter parameters are provided.
+        """
+
+        async with self.__db_manager__.transaction() as session:
+            return await self._fetch_one_by(session, fields)
+
+    async def get_many_by(self, **fields) -> Sequence[_modelT]:
+        """
+        Fetches multiple records from the database filtered by the given fields.
+
+        :param fields: `dict[str, Any]`
+            (Optional) The fields used for filtering the query.
+            At least one filter parameter must be provided.
+
+        :return: `Sequence[_modelT]`
+            A list of matching records, or an empty list if no records are found.
+
+        :raises:
+            :raise ValueError: If no filter parameters are provided.
+        """
+
+        async with self.__db_manager__.transaction() as session:
+            return await self._fetch_many_by(session, fields)

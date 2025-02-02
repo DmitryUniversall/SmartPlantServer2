@@ -43,3 +43,4 @@ class _MissingSentinel:
 
 MISSING: Any = _MissingSentinel()
 JsonDict: TypeAlias = dict[str, Any]
+UUIDString: TypeAlias = str

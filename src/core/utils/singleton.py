@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from typing import Any
 
 
@@ -22,3 +23,11 @@ class SingletonMeta(type):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class ABCSingletonMeta(ABCMeta, SingletonMeta):
+    """
+    A metaclass that combines Singleton behavior with Abstract Base Class behavior.
+
+    Inheriting from both SingletonMeta and ABCMeta allows Singleton to be used as a base class for abstract subclasses.
+    """

@@ -57,7 +57,7 @@ async def async_session_error_convert_wrapper(
             yield session
         except IntegrityError as error:
             for key, value in error_mapping.items():
-                if key not in str(error.orig).lower():
+                if key.lower() not in str(error.orig).lower():
                     continue
 
                 _logger.debug(f"Converting db error {error.orig.__class__.__name__} to {value.__name__} ({error.orig})")
@@ -71,7 +71,6 @@ async def async_session_error_convert_wrapper(
                     ismulti=error.ismulti,
                 )
 
-            _logger.debug(f"Unknown error during db session:\n{get_traceback_text(error)}")
             raise error
         finally:
             await session.close()
