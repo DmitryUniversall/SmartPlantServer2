@@ -1,21 +1,14 @@
 import hashlib
 
-from src.app.bases.db import AbstractAsyncDatabaseManager
 from src.app.bases.resources import ObservableResource
 from src.app.main.db import AsyncDatabaseManagerST
+from src.core.utils.singleton import ABCSingletonMeta
 from .model import UserModel
 
-_db_manager: AsyncDatabaseManagerST = AsyncDatabaseManagerST()
 
-
-class UserResourceST(ObservableResource[UserModel, int]):
-    @property
-    def __model_cls__(self) -> type[UserModel]:
-        return UserModel
-
-    @property
-    def __db_manager__(self) -> AbstractAsyncDatabaseManager:
-        return _db_manager
+class UserResourceST(ObservableResource[UserModel, int], metaclass=ABCSingletonMeta):
+    __model_cls__: type[UserModel] = UserModel
+    __db_manager__: AsyncDatabaseManagerST = AsyncDatabaseManagerST()
 
     def hash_password(self, password: str, encoding: str = "utf-8") -> str:
         return hashlib.sha256(password.encode(encoding=encoding)).hexdigest()

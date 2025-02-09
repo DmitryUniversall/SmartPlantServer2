@@ -14,8 +14,8 @@ class GenericApplicationHTTPException[_contentT: Any](ApplicationHTTPException[_
     def __init__(
             self,
             *,
-            payload: ApplicationResponsePayload[_contentT] | None = None,
-            status_code: int = HTTPStatus.NOT_FOUND,
+            payload: ApplicationResponsePayload[_contentT] | None = None,  # FIXME: Typing
+            status_code: int = HTTPStatus.INTERNAL_SERVER_ERROR,
             headers: dict[str, str] | None = None,
             **payload_kwargs
     ) -> None:

@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from pydantic import Field
+
 from src.app.bases.db import BaseSchema
 
 
@@ -10,7 +12,7 @@ from src.app.bases.db import BaseSchema
 
 class UserPublic(BaseSchema):  # For public usage. Can be shown to other users
     id: int
-    username: str
+    username: str = Field(..., max_length=50)
     created_at: datetime
 
 

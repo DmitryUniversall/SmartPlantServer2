@@ -84,7 +84,7 @@
             },
             "UNKNOWN_USER": {
                 "application_status_code": 3008,
-                "message": "Invalid authorization token payload: User not found"
+                "message": "Invalid authorization data: User not found"
             },
             "WRONG_AUTH_CREDENTIALS": {
                 "application_status_code": 3009,
@@ -101,6 +101,10 @@
             "SUSPICIOUS_ACTIVITY": {
                 "application_status_code": 3012,
                 "message": "Suspicious activity detected, this session is no more valid"
+            },
+            "AUTH_FAILED_UNKNOWN_ERROR": {
+                "application_status_code": 3013,
+                "message": "Unknown error occurred during auth process, request rejected"
             }
         }
     }

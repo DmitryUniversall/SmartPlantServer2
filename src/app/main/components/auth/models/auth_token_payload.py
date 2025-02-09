@@ -19,7 +19,7 @@ class AuthTokenPayload(BaseSchema):
     token_type: AuthTokenType
     exp: datetime
     user_id: int
-    session_id: UUIDString
+    session_uuid: UUIDString
 
     # noinspection PyNestedDecorators
     @field_validator('token_type', mode="before")

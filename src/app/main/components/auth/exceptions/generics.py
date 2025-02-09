@@ -118,3 +118,12 @@ class InactiveSessionHTTPException(AuthHTTPException):
             **project_settings.APPLICATION_STATUS_CODES.AUTH.INACTIVE_SESSION,
             **payload_kwargs
         })
+
+
+class AuthFailedUnknownErrorHTTPException(AuthHTTPException):
+    def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:
+        return ApplicationResponsePayload(**{
+            "ok": False,
+            **project_settings.APPLICATION_STATUS_CODES.AUTH.AUTH_FAILED_UNKNOWN_ERROR,
+            **payload_kwargs
+        })

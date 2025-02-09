@@ -37,7 +37,7 @@ class AbstractSessionManager(ABC):
         """Get all active sessions for user"""
 
     @abstractmethod
-    async def get_session(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
+    async def get_session(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
         """Get specific session details"""
 
     @abstractmethod
@@ -45,7 +45,7 @@ class AbstractSessionManager(ABC):
         """Force token rotation for session"""
 
     @abstractmethod
-    async def rotate_session_tokens_by_id(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
+    async def rotate_session_tokens_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
         """Refresh session tokens by id"""
 
     @abstractmethod
@@ -53,11 +53,11 @@ class AbstractSessionManager(ABC):
         """Refresh session tokens by refresh token"""
 
     @abstractmethod
-    async def revoke_session(self, user_id: int, session_id: UUIDString) -> None:
+    async def revoke_session(self, user_id: int, session_uuid: UUIDString) -> None:
         """Revoke specific session"""
 
     @abstractmethod
-    async def revoke_other_sessions(self, user_id: int, keep_session_id: UUIDString) -> None:
+    async def revoke_other_sessions(self, user_id: int, keep_session_uuid: UUIDString) -> None:
         """Revoke all sessions except specified one"""
 
     @abstractmethod
@@ -69,15 +69,15 @@ class AbstractSessionManager(ABC):
         """Update last_used timestamp"""
 
     @abstractmethod
-    async def session_heartbeat_by_id(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
+    async def session_heartbeat_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
         """Update last_used timestamp by id"""
 
     @abstractmethod
-    async def generate_access_token(self, user_id: int, session_id: UUIDString, expires_at: datetime | None = None) -> str:
+    async def generate_access_token(self, user_id: int, session_uuid: UUIDString, expires_at: datetime | None = None) -> str:
         """Generate new access token"""
 
     @abstractmethod
-    async def generate_refresh_token(self, user_id: int, session_id: UUIDString, expires_at: datetime | None = None) -> str:
+    async def generate_refresh_token(self, user_id: int, session_uuid: UUIDString, expires_at: datetime | None = None) -> str:
         """Generate new refresh token"""
 
     @abstractmethod
@@ -92,7 +92,7 @@ class AbstractSessionManager(ABC):
         except jwt.PyJWTError as error:
             raise TokenInvalidHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 
-    def generate_session_id(self) -> str:
+    def generate_session_uuid(self) -> str:
         return str(uuid.uuid4())
 
     def generate_token_id(self) -> str:

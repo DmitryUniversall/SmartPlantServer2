@@ -1,28 +1,30 @@
 from datetime import datetime
 
+from pydantic import Field
+
 from src.app.bases.db import BaseSchema
 from src.core.utils.types import UUIDString
 
 
 class AuthSessionInternal(BaseSchema):
-    session_id: UUIDString
+    session_uuid: UUIDString
     user_id: int
-    access_token: str
-    refresh_token: str
-    session_name: str
-    ip_address: str
-    user_agent: str
     is_active: bool = True
+    access_token: str = Field(..., max_length=300)
+    refresh_token: str = Field(..., max_length=300)
+    session_name: str = Field(..., max_length=50)
+    ip_address: str = Field(..., max_length=25)
+    user_agent: str = Field(..., max_length=300)
     created_at: datetime
     last_used: datetime
     expires_at: datetime
 
 
 class AuthSessionPrivate(BaseSchema):
-    session_id: UUIDString
-    user_id: int
-    session_name: str
+    session_uuid: UUIDString
     is_active: bool = True
+    user_id: int
+    session_name: str = Field(..., max_length=50)
     created_at: datetime
     last_used: datetime
     expires_at: datetime

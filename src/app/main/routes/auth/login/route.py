@@ -12,14 +12,13 @@ _auth_repository = AuthRepositoryST()
 
 
 @auth_router.post("/login/")
-async def login_route(payload: LoginRequestPayload, request: Request) -> ApplicationJsonResponse:
+async def login_route(request: Request, payload: LoginRequestPayload) -> ApplicationJsonResponse:
     if request.client is None:
         raise ForbiddenHTTPException(message="Client is unknown")
 
     auth_info = await _auth_repository.login(
         ip_address=request.client.host,
         user_agent=request.headers.get("User-Agent", "unknown"),
-        session_name=f"",
         **payload.model_dump()
     )
 

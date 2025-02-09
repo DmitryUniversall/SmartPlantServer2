@@ -24,7 +24,7 @@ from ...models.access_token_payload import AccessTokenPayload
 from ...models.auth_token_payload import AuthTokenPayload
 from ...models.refresh_token_payload import RefreshTokenPayload
 from ...models.user.model import UserModel
-from ...models.user.schemas import UserInternal
+from ...models.user.schema import UserInternal
 from ...models.user.user_resource import UserResourceST
 
 _logger = logging.getLogger(__name__)
@@ -39,8 +39,8 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
     def __init__(self) -> None:
         super().__init__(db=project_settings.AUTH_REDIS_DB_ID)
 
-    def get_session_key(self, user_id: int, session_id: UUIDString) -> str:
-        return self.AUTH_USER_SESSION_REDIS_KEY.format(user_id, session_id)
+    def get_session_key(self, user_id: int, session_uuid: UUIDString) -> str:
+        return self.AUTH_USER_SESSION_REDIS_KEY.format(user_id, session_uuid)
 
     def get_user_sessions_key(self, user_id: int) -> UUIDString:
         return self.AUTH_USER_SESSIONS_REDIS_KEY.format(user_id)
@@ -48,13 +48,13 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
     async def __save_session(self, session: AuthSessionInternal) -> None:
         redis = await self.get_redis()
 
-        session_key = self.get_session_key(session.user_id, session.session_id)
+        session_key = self.get_session_key(session.user_id, session.session_uuid)
         await redis.hset(session_key, mapping=convert_for_redis(session.to_json_dict()))  # type: ignore
         await redis.expire(session_key, round(session.expires_at.timestamp()))  # type: ignore
 
-    async def __delete_session(self, user_id: int, session_id: UUIDString, *, soft: bool) -> None:
+    async def __delete_session(self, user_id: int, session_uuid: UUIDString, *, soft: bool) -> None:
         redis = await self.get_redis()
-        session_key = self.get_session_key(user_id, session_id)
+        session_key = self.get_session_key(user_id, session_uuid)
 
         if not await redis.exists(session_key):
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
@@ -66,9 +66,9 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
         # Soft delete: update the "is_active" field to False
         await redis.hset(session_key, "is_active", "false")  # type: ignore
 
-    async def __get_session(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
+    async def __get_session(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
         redis = await self.get_redis()
-        session_key = self.get_session_key(user_id, session_id)
+        session_key = self.get_session_key(user_id, session_uuid)
 
         session_data = await redis.hgetall(session_key)  # type: ignore
         if not session_data:
@@ -102,9 +102,9 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
     async def __scan_for_user_sessions(self, user_id: int) -> tuple[AuthSessionInternal, ...]:
         redis = await self.get_redis()
 
-        session_ids = tuple(
+        session_uuids = tuple(
             key async for key in redis.scan_iter(match=self.get_user_sessions_key(user_id)))  # type: ignore
-        sessions = await asyncio.gather(*(redis.hgetall(key) for key in session_ids))  # type: ignore
+        sessions = await asyncio.gather(*(redis.hgetall(key) for key in session_uuids))  # type: ignore
 
         return tuple(map(AuthSessionInternal.model_validate, sessions))
 
@@ -123,12 +123,12 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
             access_token_expires_at: datetime | None = None,
             refresh_token_expires_at: datetime | None = None
     ) -> AuthSessionInternal:
-        session_id = self.generate_session_id()
+        session_uuid = self.generate_session_uuid()
         session = AuthSessionInternal(
-            session_id=session_id,
+            session_uuid=session_uuid,
             user_id=user_id,
-            access_token=await self.generate_access_token(user_id, session_id, access_token_expires_at),
-            refresh_token=await self.generate_refresh_token(user_id, session_id, refresh_token_expires_at),
+            access_token=await self.generate_access_token(user_id, session_uuid, access_token_expires_at),
+            refresh_token=await self.generate_refresh_token(user_id, session_uuid, refresh_token_expires_at),
             session_name=session_name,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -142,7 +142,7 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
 
     async def validate_access_token(self, access_token: str) -> AuthSessionInternal:
         payload = await self.__decode_access_token(access_token)
-        session = await self.__get_session(payload.user_id, payload.session_id)
+        session = await self.__get_session(payload.user_id, payload.session_uuid)
 
         if session.access_token != access_token:
             raise TokenExpiredHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
@@ -151,7 +151,7 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
 
     async def validate_refresh_token(self, refresh_token: str) -> AuthSessionInternal:
         payload = await self.__decode_refresh_token(refresh_token)
-        session = await self.__get_session(payload.user_id, payload.session_id)
+        session = await self.__get_session(payload.user_id, payload.session_uuid)
 
         if session.refresh_token != refresh_token:
             raise TokenExpiredHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
@@ -161,17 +161,17 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
     async def get_user_sessions(self, user_id: int) -> tuple[AuthSessionInternal, ...]:
         return await self.__scan_for_user_sessions(user_id)
 
-    async def get_session(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
-        return await self.__get_session(user_id, session_id)
+    async def get_session(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
+        return await self.__get_session(user_id, session_uuid)
 
     async def rotate_session_tokens(self, session: AuthSessionInternal) -> None:
-        session.access_token = await self.generate_access_token(session.user_id, session.session_id)
-        session.refresh_token = await self.generate_refresh_token(session.user_id, session.session_id)
+        session.access_token = await self.generate_access_token(session.user_id, session.session_uuid)
+        session.refresh_token = await self.generate_refresh_token(session.user_id, session.session_uuid)
         session.expires_at = calculate_refresh_expire_at()  # TODO: Pass expires_at here
         await self.update_session(session)
 
-    async def rotate_session_tokens_by_id(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
-        session = await self.get_session(user_id, session_id)
+    async def rotate_session_tokens_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
+        session = await self.get_session(user_id, session_uuid)
         await self.rotate_session_tokens(session)
         return session
 
@@ -180,12 +180,12 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
         await self.rotate_session_tokens(session)
         return session
 
-    async def revoke_session(self, user_id: int, session_id: UUIDString) -> None:
-        await self.__delete_session(user_id, session_id, soft=True)
+    async def revoke_session(self, user_id: int, session_uuid: UUIDString) -> None:
+        await self.__delete_session(user_id, session_uuid, soft=True)
 
-    async def revoke_other_sessions(self, user_id: int, keep_session_id: UUIDString) -> None:
+    async def revoke_other_sessions(self, user_id: int, keep_session_uuid: UUIDString) -> None:
         for session in await self.get_user_sessions(user_id):
-            await self.__delete_session(user_id, session.session_id, soft=True)
+            await self.__delete_session(user_id, session.session_uuid, soft=True)
 
     async def update_session(self, updated_schema: AuthSessionInternal) -> None:
         await self.__save_session(updated_schema)
@@ -194,21 +194,21 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
         session.last_used = datetime.now()
         await self.update_session(session)
 
-    async def session_heartbeat_by_id(self, user_id: int, session_id: UUIDString) -> AuthSessionInternal:
-        session = await self.get_session(user_id, session_id)
+    async def session_heartbeat_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
+        session = await self.get_session(user_id, session_uuid)
         await self.session_heartbeat(session)
         return session
 
-    async def generate_access_token(self, user_id: int, session_id: UUIDString, expires_at: datetime | None = None) -> str:
-        payload = AccessTokenPayload(user_id=user_id, session_id=session_id)
+    async def generate_access_token(self, user_id: int, session_uuid: UUIDString, expires_at: datetime | None = None) -> str:
+        payload = AccessTokenPayload(user_id=user_id, session_uuid=session_uuid)
 
         if expires_at is not None:
             payload.exp = expires_at
 
         return await self.__create_access_token(payload=payload)
 
-    async def generate_refresh_token(self, user_id: int, session_id: UUIDString, expires_at: datetime | None = None) -> str:
-        payload = RefreshTokenPayload(user_id=user_id, session_id=session_id)
+    async def generate_refresh_token(self, user_id: int, session_uuid: UUIDString, expires_at: datetime | None = None) -> str:
+        payload = RefreshTokenPayload(user_id=user_id, session_uuid=session_uuid)
 
         if expires_at is not None:
             payload.exp = expires_at

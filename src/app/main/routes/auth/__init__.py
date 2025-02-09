@@ -5,3 +5,4 @@ from .logout import *
 from .me import *
 from .refresh import *
 from .register import *
+from .terminate_session import *

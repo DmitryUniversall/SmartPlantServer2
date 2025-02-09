@@ -1,1 +1,1 @@
-from .redis_client_manager import RedisClientMixin
+from .redis_client_mixin import RedisClientMixin

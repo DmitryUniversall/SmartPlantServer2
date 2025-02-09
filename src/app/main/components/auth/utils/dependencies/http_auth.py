@@ -1,6 +1,6 @@
 from starlette.requests import Request
 
-from src.app.main.components.auth.auth_info import AuthInfo
+from src.app.main.components.auth.models.auth_info import AuthInfo
 from src.app.main.components.auth.repository import AuthRepositoryST
 from src.app.main.components.auth.utils.bearer_auth_mixin import BearerAuthMixin
 

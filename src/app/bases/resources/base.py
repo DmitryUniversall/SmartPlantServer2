@@ -67,8 +67,7 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
         if not fields:
             raise ValueError("At least one filter parameter must be provided")
 
-        result = await session.execute(select(self.__model_cls__).filter_by(**fields))
-        return result
+        return await session.execute(select(self.__model_cls__).filter_by(**fields))
 
     async def _fetch_one_by(self, session: AsyncSession, fields: dict[str, Any]) -> _modelT | None:
         """
@@ -244,7 +243,7 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
             The fetched model object
         """
 
-        async with self.__db_manager__.transaction() as session:
+        async with self.__db_manager__.session() as session:
             return await self._fetch_by_pk(session, pk)
 
     async def delete(self, model_obj: _modelT) -> None:
@@ -319,7 +318,7 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
             :raise ValueError: If no filter parameters are provided.
         """
 
-        async with self.__db_manager__.transaction() as session:
+        async with self.__db_manager__.session() as session:
             return await self._fetch_one_by(session, fields)
 
     async def get_many_by(self, **fields) -> Sequence[_modelT]:
@@ -337,5 +336,5 @@ class BaseResource[_modelT: BaseModel, _pkT: Any](ABC):
             :raise ValueError: If no filter parameters are provided.
         """
 
-        async with self.__db_manager__.transaction() as session:
+        async with self.__db_manager__.session() as session:
             return await self._fetch_many_by(session, fields)

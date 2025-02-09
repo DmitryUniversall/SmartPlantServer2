@@ -6,9 +6,9 @@ from src.app.main.components.auth.models.user import UserPrivate
 
 
 class LoginRequestPayload(BaseSchema):
-    username: str = Field(..., max_length=25)
+    username: str
+    session_name: str
     password: str = Field(..., max_length=50)
-    session_name: str = Field(..., max_length=50)
 
 
 class LoginResponsePayload(BaseSchema):

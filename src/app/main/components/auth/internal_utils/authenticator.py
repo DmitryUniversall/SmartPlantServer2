@@ -1,19 +1,20 @@
 from datetime import datetime
 from http import HTTPStatus
 
-from src.app.main.components.auth.auth_info import AuthInfo
 from src.app.main.components.auth.exceptions import (
     AuthUserAlreadyExists,
     WrongAuthCredentialsHTTPException,
-    SuspiciousActivityHTTPException
+    SuspiciousActivityHTTPException,
+    AuthUserUnknownHTTPException
 )
 from src.app.main.components.auth.internal_utils.sessions import (
     AbstractSessionManager,
     RedisSessionManager
 )
+from src.app.main.components.auth.models.auth_info import AuthInfo
 from src.app.main.components.auth.models.auth_session import AuthSessionInternal
 from src.app.main.components.auth.models.user.model import UserModel
-from src.app.main.components.auth.models.user.schemas import UserInternal
+from src.app.main.components.auth.models.user.schema import UserInternal
 from src.app.main.components.auth.models.user.user_resource import UserResourceST
 from src.app.main.db.exceptions import UniqueConstraintFailed
 from src.core.utils.singleton import SingletonMeta
@@ -25,15 +26,22 @@ class AuthenticatorST(metaclass=SingletonMeta):
         self._session_manager: AbstractSessionManager = RedisSessionManager()
         self._user_resource: UserResourceST = UserResourceST()
 
+    async def _get_user_by_id(self, user_id: int) -> UserInternal:  # TODO: Move to other place
+        try:
+            user_model = await self._user_resource.get_by_pk(user_id)
+            return user_model.to_schema(UserInternal)
+        except UserModel.DoesNotExist:
+            raise AuthUserUnknownHTTPException()
+
     async def _log_security_event(self) -> None:  # TODO
         pass
 
-    async def _invalidate_session(self, user_id: int, session_id: UUIDString) -> None:
-        await self._session_manager.revoke_session(user_id, session_id)
+    async def _invalidate_session(self, user_id: int, session_uuid: UUIDString) -> None:
+        await self._session_manager.revoke_session(user_id, session_uuid)
 
     async def _handle_suspicious_activity(self, user: UserInternal, session: AuthSessionInternal) -> None:
         await self._log_security_event()
-        await self._invalidate_session(user.id, session.session_id)
+        await self._invalidate_session(user.id, session.session_uuid)
 
     async def _register_user(self, username: str, password: str, **field) -> UserInternal:
         try:
@@ -51,19 +59,18 @@ class AuthenticatorST(metaclass=SingletonMeta):
 
     async def authenticate(self, access_token: str) -> AuthInfo:
         session = await self._session_manager.validate_access_token(access_token)
-        user_model = await self._user_resource.get_by_pk(session.user_id)
-        return AuthInfo(user=user_model.to_schema(UserInternal), session=session)
+        user = await self._get_user_by_id(session.user_id)
+        return AuthInfo(user=user, session=session)
 
     async def refresh(self, refresh_token: str, current_client_ip: str, current_client_user_agent: str) -> AuthInfo:
         session = await self._session_manager.refresh_session(refresh_token)
-        user_model = await self._user_resource.get_by_pk(session.user_id)
-        user_schema = user_model.to_schema(UserInternal)
+        user = await self._get_user_by_id(session.user_id)
 
         if session.ip_address != current_client_ip or session.user_agent != current_client_user_agent:
-            await self._handle_suspicious_activity(user_schema, session)
+            await self._handle_suspicious_activity(user, session)
             raise SuspiciousActivityHTTPException(status_code=HTTPStatus.FORBIDDEN)
 
-        return AuthInfo(user=user_schema, session=session)
+        return AuthInfo(user=user, session=session)
 
     async def register(
             self,
@@ -103,5 +110,5 @@ class AuthenticatorST(metaclass=SingletonMeta):
 
         return AuthInfo(user=user, session=session)
 
-    async def revoke_session(self, user_id: int, session_id: UUIDString) -> None:
-        await self._session_manager.revoke_session(user_id, session_id)
+    async def revoke_session(self, user_id: int, session_uuid: UUIDString) -> None:
+        await self._session_manager.revoke_session(user_id, session_uuid)

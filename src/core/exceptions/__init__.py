@@ -6,5 +6,6 @@ from .generics import (
     ConfigurationError,
     NotFoundError,
     AlreadyExistsError,
-    BadVersionError
+    BadVersionError,
+    IllegalArgumentError
 )

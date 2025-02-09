@@ -1,10 +1,13 @@
+import logging
 from datetime import datetime
 
-from src.app.main.components.auth.auth_info import AuthInfo
 from src.app.main.components.auth.internal_utils.authenticator import AuthenticatorST
+from src.app.main.components.auth.models.auth_info import AuthInfo
 from src.app.main.components.auth.models.user import UserInternal, UserResourceST
 from src.core.utils.singleton import SingletonMeta
 from src.core.utils.types import UUIDString
+
+_logger = logging.getLogger(__name__)
 
 
 class AuthRepositoryST(metaclass=SingletonMeta):
@@ -50,8 +53,8 @@ class AuthRepositoryST(metaclass=SingletonMeta):
     async def refresh(self, refresh_token: str, current_client_ip: str, current_client_user_agent: str) -> AuthInfo:
         return await self._authenticator.refresh(refresh_token, current_client_ip, current_client_user_agent)
 
-    async def revoke_session(self, user_id: int, session_id: UUIDString) -> None:
-        await self._authenticator.revoke_session(user_id, session_id)
+    async def revoke_session(self, user_id: int, session_uuid: UUIDString) -> None:
+        await self._authenticator.revoke_session(user_id, session_uuid)
 
     async def get_user_by_id(self, user_id: int) -> UserInternal:
         user_model = await self._user_resource.get_by_pk(user_id)

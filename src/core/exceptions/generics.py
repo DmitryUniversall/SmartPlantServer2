@@ -27,3 +27,7 @@ class AlreadyExistsError(BaseApplicationError):
 
 class BadVersionError(BaseApplicationError):
     pass
+
+
+class IllegalArgumentError(BaseApplicationError):
+    pass
