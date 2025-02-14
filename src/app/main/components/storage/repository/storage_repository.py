@@ -15,7 +15,7 @@ class StorageRepositoryST(metaclass=SingletonMeta):
             self,
             ttl: int,
             **message_data: Unpack[StorageDirectMessageCreateTD]
-    ) -> StorageChannelMessage | None:
+    ) -> StorageDirectResponse | None:
         message = StorageDirectRequest(**message_data)
 
         return await self._storage_manager.send_direct_request(message, ttl=ttl)

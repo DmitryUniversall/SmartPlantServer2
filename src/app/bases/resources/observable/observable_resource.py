@@ -1,133 +1,115 @@
+import inspect
 from abc import ABC
-from collections import defaultdict
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 from typing import override
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.app.bases.db import BaseModel
-from src.app.bases.resources.base import BaseResource
 from .event_type import ResourceEventType
-from .observer import ResourceEventObserver
+from .. import BaseResource
 
 
 class ObservableResource[_modelT: BaseModel, _pkT: Any](BaseResource[_modelT, _pkT], ABC):
-    def __init__(self):
+    """
+    An observable resource extends BaseResource to provide event notifications.
+    You can register listeners for events (using the `listen` decorator)
+    that will be called before/after create, update, or delete operations.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self._listeners: dict[ResourceEventType, list[Callable[..., Any]]] = {}
+
+    def listen(self, event_type: ResourceEventType) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
-        Initializes ObservableResource
-        """
+        Decorator to register a listener for a specific resource event.
 
-        self._event_listeners: defaultdict[ResourceEventType, list[ResourceEventObserver]] = defaultdict(list)
+        Example:
 
-    @override
-    async def _delete_by_pk(self, session: AsyncSession, pk: _pkT) -> _modelT:
-        """
-        Deletes a model object by primary key and trigger pre/post-delete events.
-
-        :param session: `AsyncSession`
-            Database session used for deletion.
-
-        :param pk: `_pkT`
-            The primary key of the record to delete.
-
-        :return: `_modelT`
-            The deleted record.
-        """
-
-        await self._call_event(event_type=ResourceEventType.PRE_DELETE, pk=pk, session=session)
-        deleted = await super()._delete_by_pk(session, pk)
-        await self._call_event(event_type=ResourceEventType.POST_DELETE, deleted=deleted, session=session)
-
-        return deleted
-
-    @override
-    async def _update_by_pk(self, session: AsyncSession, pk: _pkT, **fields) -> _modelT:
-        """
-        Updates a model object by primary key and trigger pre/post-update events.
-
-        :param session: `AsyncSession`
-            Database session used for updating.
-
-        :param pk: `_pkT`
-            The primary key of the record to update.
-
-        :param fields: `dict`
-            The fields to update with their new values.
-
-        :return: `_modelT`
-            The updated record.
+            @resource.listen(ResourceEventType.PRE_CREATE)
+            async def on_pre_create(*, model_obj):
+                ...
         """
 
-        await self._call_event(event_type=ResourceEventType.PRE_UPDATE, updating=pk, session=session)
-        updated = await super()._update_by_pk(session, pk, **fields)
-        await self._call_event(event_type=ResourceEventType.POST_UPDATE, updated=updated, session=session)
-
-        return updated
-
-    @override
-    async def _update_model(self, session: AsyncSession, model_obj: _modelT) -> None:
-        """
-        Updates an existing model and trigger pre/post-update events.
-
-        :param session: `AsyncSession`
-            Database session used for updating.
-
-        :param model_obj: `_modelT`
-            The model instance to update.
-        """
-
-        await self._call_event(event_type=ResourceEventType.PRE_UPDATE, updating=model_obj, session=session)
-        await super()._update_model(session, model_obj)
-        await self._call_event(event_type=ResourceEventType.POST_UPDATE, updated=model_obj, session=session)
-
-    @override
-    async def _create(self, session: AsyncSession, model_obj: _modelT) -> None:
-        """
-        Inserts a new model instance into the database and trigger pre/post-create events.
-
-        :param session: `AsyncSession`
-            Database session used for insertion.
-
-        :param model_obj: `_modelT`
-            The model instance to insert.
-        """
-
-        await self._call_event(event_type=ResourceEventType.PRE_CREATE, creating=model_obj, session=session)
-        await super()._create(session, model_obj)
-        await self._call_event(event_type=ResourceEventType.POST_CREATE, created=model_obj, session=session)
-
-    async def _call_event(self, event_type: ResourceEventType, *args, **kwargs) -> None:
-        """
-        Calls all observers associated with a given event type.
-
-        :param event_type: `ResourceEventType`
-            The type of event to trigger.
-
-        :param args: `tuple`
-            Positional arguments to pass to event observers.
-
-        :param kwargs: `dict`
-            Keyword arguments to pass to event observers.
-        """
-
-        observers = self._event_listeners[event_type]
-
-        for observer in observers:
-            await observer(*args, **kwargs)
-
-    def listen(self, event_type: ResourceEventType) -> Callable[[ResourceEventObserver], ResourceEventObserver]:
-        """
-        Decorator to register an event listener for a specific event type.
-
-        :param event_type: `ResourceEventType`
-            The event type to listen for.
-
-        :return: `Callable[[ResourceEventObserver], ResourceEventObserver]`
-            A decorator that registers an event observers for the given event type.
-        """
-
-        def decorator(coro):
-            self._event_listeners[event_type].append(coro)
-            return coro
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            self._listeners.setdefault(event_type, []).append(func)
+            return func
 
         return decorator
+
+    async def _notify_listeners(self, event_type: ResourceEventType, **kwargs: Any) -> None:
+        """
+        Call all registered listeners for the given event type.
+        If a listener returns an awaitable, it is awaited.
+        """
+
+        for listener in self._listeners.get(event_type, []):
+            result = listener(**kwargs)
+            if inspect.isawaitable(result):
+                await result
+
+    @override
+    async def create(self, model_obj: _modelT) -> None:
+        await self._notify_listeners(ResourceEventType.PRE_CREATE, model_obj=model_obj)
+        await super().create(model_obj)
+        await self._notify_listeners(ResourceEventType.POST_CREATE, model_obj=model_obj)
+
+    @override
+    async def bulk_create(self, model_objs: Sequence[_modelT]) -> None:
+        await self._notify_listeners(ResourceEventType.PRE_BULK_CREATE, model_objs=model_objs)
+        await super().bulk_create(model_objs)
+        await self._notify_listeners(ResourceEventType.POST_BULK_CREATE, model_objs=model_objs)
+
+    @override
+    async def update(self, model_obj: _modelT, **fields) -> None:
+        await self._notify_listeners(ResourceEventType.PRE_UPDATE, model_obj=model_obj, fields=fields)
+        await super().update(model_obj, **fields)
+        await self._notify_listeners(ResourceEventType.POST_UPDATE, model_obj=model_obj, fields=fields)
+
+    @override
+    async def update_by_pk(self, pk: _pkT, **fields) -> _modelT | None:
+        await self._notify_listeners(ResourceEventType.PRE_UPDATE, pk=pk, fields=fields)
+        result = await super().update_by_pk(pk, **fields)
+        await self._notify_listeners(ResourceEventType.POST_UPDATE, pk=pk, fields=fields, result=result)
+        return result
+
+    @override
+    async def update_by(self, update_data: dict[str, Any], **filters) -> _modelT | None:
+        await self._notify_listeners(ResourceEventType.PRE_UPDATE, update_data=update_data, filters=filters)
+        result = await super().update_by(update_data, **filters)
+        await self._notify_listeners(ResourceEventType.POST_UPDATE, update_data=update_data, filters=filters, result=result)
+        return result
+
+    @override
+    async def update_by_strict(self, update_data: dict[str, Any], **filters) -> _modelT:
+        await self._notify_listeners(ResourceEventType.PRE_UPDATE, update_data=update_data, filters=filters)
+        result = await super().update_by_strict(update_data, **filters)
+        await self._notify_listeners(ResourceEventType.POST_UPDATE, update_data=update_data, filters=filters, result=result)
+        return result
+
+    @override
+    async def bulk_update(self, update_data: dict[str, Any], **filters) -> int:
+        await self._notify_listeners(ResourceEventType.PRE_BULK_UPDATE, update_data=update_data, filters=filters)
+        result = await super().bulk_update(update_data, **filters)
+        await self._notify_listeners(ResourceEventType.POST_BULK_UPDATE, update_data=update_data, filters=filters, result=result)
+        return result
+
+    @override
+    async def delete(self, model_obj: _modelT) -> None:
+        await self._notify_listeners(ResourceEventType.PRE_DELETE, model_obj=model_obj)
+        await super().delete(model_obj)
+        await self._notify_listeners(ResourceEventType.POST_DELETE, model_obj=model_obj)
+
+    @override
+    async def delete_by_pk(self, pk: _pkT) -> _modelT | None:
+        await self._notify_listeners(ResourceEventType.PRE_DELETE, pk=pk)
+        result = await super().delete_by_pk(pk)
+        await self._notify_listeners(ResourceEventType.POST_DELETE, pk=pk, result=result)
+        return result
+
+    @override
+    async def delete_by(self, **filters) -> tuple[_modelT, ...]:
+        await self._notify_listeners(ResourceEventType.PRE_DELETE, filters=filters)
+        result = await super().delete_by(**filters)
+        await self._notify_listeners(ResourceEventType.POST_DELETE, filters=filters, result=result)
+        return result

@@ -18,6 +18,7 @@ async def direct_response_route(
 ) -> ApplicationJsonResponse:
     await _storage_repository.send_response(
         user_id=auth_info.user.id,
+        response_to_message_uuid=payload.response_to_message_uuid,
         **payload.message.to_json_dict(),
     )
 

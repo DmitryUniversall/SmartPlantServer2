@@ -28,7 +28,7 @@ class AuthenticatorST(metaclass=SingletonMeta):
 
     async def _get_user_by_id(self, user_id: int) -> UserInternal:  # TODO: Move to other place
         try:
-            user_model = await self._user_resource.get_by_pk(user_id)
+            user_model = await self._user_resource.get_by_pk_strict(user_id)
             return user_model.to_schema(UserInternal)
         except UserModel.DoesNotExist:
             raise AuthUserUnknownHTTPException()

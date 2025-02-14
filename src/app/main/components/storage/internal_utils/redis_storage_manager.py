@@ -48,7 +48,7 @@ class RedisCachedStorageManager(RedisClientMixin, AbstractStorageManager):
         redis = await self.get_redis()
         key = self._get_response_direct_key(request.user_id, request.target_name, request.uuid)
 
-        if (result := await redis.blpop([key], timeout=timeout)) is None:
+        if (result := await redis.blpop([key], timeout=timeout)) is None:  # type: ignore
             return None
 
         return StorageDirectResponse.model_validate_json(result[1])
@@ -56,16 +56,16 @@ class RedisCachedStorageManager(RedisClientMixin, AbstractStorageManager):
     async def _send_direct(self, message: StorageDirectMessage, *, key: str | None = None, ttl: int | None = None) -> None:
         redis = await self.get_redis()
         key = key if key is not None else self._get_direct_key(message.user_id, message.target_name)
-        await redis.rpush(key, message.model_dump_json())
+        await redis.rpush(key, message.model_dump_json())  # type: ignore
 
         if ttl is not None:
             await redis.expire(key, time=ttl)  # FIXME: This will delete whole list, not just this message
 
-    async def _send_direct_request(self, request: StorageDirectRequest, *, ttl: int, wait: bool = True) -> StorageDirectResponse | None:
+    async def _send_direct_request(self, request: StorageDirectRequest, *, ttl: int | None = None, wait: bool = True) -> StorageDirectResponse | None:
         _logger.debug(f"Sending direct request {request.uuid} ({request.sender_name} -> {request.target_name})")
 
         await self._send_direct(request, ttl=ttl)
-        return await self._wait_for_direct_response(request, timeout=ttl) if wait else None
+        return await self._wait_for_direct_response(request, timeout=ttl) if wait and ttl is not None else None
 
     async def _send_direct_response(self, response: StorageDirectResponse, response_to_message_uuid: UUIDString, ttl: int | None = None) -> None:
         _logger.debug(f"Sending direct response to {response_to_message_uuid} ({response.sender_name} -> {response.target_name})")
@@ -77,10 +77,11 @@ class RedisCachedStorageManager(RedisClientMixin, AbstractStorageManager):
         redis = await self.get_redis()
         key = self._get_direct_key(user_id, device_name)
 
-        if (first := await redis.blpop([key], timeout=timeout)) is None:
+        if (first := await redis.blpop([key], timeout=timeout)) is None:  # type: ignore
             return tuple()
 
-        messages = [first[1]] + await redis.lrange(key, 0, limit)  # TODO: Check if limit is working as planned
+        # TODO: Check if limit is working as planned
+        messages = [first[1]] + await redis.lrange(key, 0, limit)  # type: ignore
 
         await redis.delete(key)
         return tuple(map(StorageDirectMessage.model_validate_json, messages))

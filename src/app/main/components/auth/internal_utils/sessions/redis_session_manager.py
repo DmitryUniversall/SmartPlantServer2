@@ -94,7 +94,7 @@ class RedisSessionManager(RedisClientMixin, AbstractSessionManager, metaclass=AB
 
     async def __get_user_from_token_payload(self, payload: AuthTokenPayload) -> UserInternal:
         try:
-            user_model = await _user_resource.get_by_pk(payload.user_id)
+            user_model = await _user_resource.get_by_pk_strict(payload.user_id)
             return user_model.to_schema(scheme_cls=UserInternal)
         except UserModel.DoesNotExist as error:
             raise AuthUserUnknownHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error

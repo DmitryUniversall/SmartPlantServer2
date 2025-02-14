@@ -57,7 +57,7 @@ class AuthRepositoryST(metaclass=SingletonMeta):
         await self._authenticator.revoke_session(user_id, session_uuid)
 
     async def get_user_by_id(self, user_id: int) -> UserInternal:
-        user_model = await self._user_resource.get_by_pk(user_id)
+        user_model = await self._user_resource.get_by_pk_strict(user_id)
         return user_model.to_schema(UserInternal)
 
     async def get_user_by_username(self, username: str, **fields) -> UserInternal:
