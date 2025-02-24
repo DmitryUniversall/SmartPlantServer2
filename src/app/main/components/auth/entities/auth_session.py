@@ -10,11 +10,11 @@ class AuthSessionInternal(BaseSchema):
     session_uuid: UUIDString
     user_id: int
     is_active: bool = True
-    access_token: str = Field(..., max_length=300)
-    refresh_token: str = Field(..., max_length=300)
+    access_token_uuid: str = Field(..., max_length=1000)
+    refresh_token_uuid: str = Field(..., max_length=1000)
     session_name: str = Field(..., max_length=50)
     ip_address: str = Field(..., max_length=25)
-    user_agent: str = Field(..., max_length=300)
+    user_agent: str = Field(..., max_length=1000)
     created_at: datetime
     last_used: datetime
     expires_at: datetime

@@ -11,7 +11,7 @@ from src.core.utils.types import UUIDString
 
 
 class AuthTokenPayload(BaseSchema):
-    uuid: str = Field(default_factory=lambda: str(uuid4()))
+    token_uuid: str = Field(default_factory=lambda: str(uuid4()))
     token_type: AuthTokenType
     exp: datetime
     user_id: int

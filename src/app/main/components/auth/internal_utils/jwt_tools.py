@@ -51,15 +51,15 @@ def create_refresh_token_with_payload(payload: 'RefreshTokenPayload') -> str:
     return create_jwt_token(payload=payload.to_json_dict(exclude='exp'), exp=payload.exp.timestamp())
 
 
-def create_access_token(user_id: int, session_uuid: UUIDString) -> str:
+def create_access_token(user_id: int, session_uuid: UUIDString, token_uuid: str | None = None) -> str:
     from src.app.main.components.auth.entities.auth_token_payload.schemas import AccessTokenPayload
 
-    payload = AccessTokenPayload(user_id=user_id, session_uuid=session_uuid)
+    payload = AccessTokenPayload(user_id=user_id, session_uuid=session_uuid, token_uuid=token_uuid)
     return create_access_token_with_payload(payload=payload)
 
 
-def create_refresh_token(user_id: int, session_uuid: UUIDString) -> str:
+def create_refresh_token(user_id: int, session_uuid: UUIDString, token_uuid: str | None = None) -> str:
     from src.app.main.components.auth.entities.auth_token_payload.schemas import RefreshTokenPayload
 
-    payload = RefreshTokenPayload(user_id=user_id, session_uuid=session_uuid)
+    payload = RefreshTokenPayload(user_id=user_id, session_uuid=session_uuid, token_uuid=token_uuid)
     return create_refresh_token_with_payload(payload=payload)

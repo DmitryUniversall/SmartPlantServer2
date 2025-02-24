@@ -16,7 +16,7 @@ async def login_route(request: Request, payload: LoginRequestPayload) -> Applica
     if request.client is None:
         raise ForbiddenHTTPException(message="Client is unknown")
 
-    auth_info = await _auth_service.login(
+    auth_info, auth_token_pair = await _auth_service.login(
         ip_address=request.client.host,
         user_agent=request.headers.get("User-Agent", "unknown"),
         **payload.model_dump()
@@ -26,7 +26,7 @@ async def login_route(request: Request, payload: LoginRequestPayload) -> Applica
         data=LoginResponsePayload(
             user=auth_info.user.convert_to(UserPrivate),
             session=auth_info.session.convert_to(AuthSessionPrivate),
-            access_token=auth_info.session.access_token,
-            refresh_token=auth_info.session.refresh_token
+            access_token=auth_token_pair.access_token,
+            refresh_token=auth_token_pair.refresh_token
         )
     )

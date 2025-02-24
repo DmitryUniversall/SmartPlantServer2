@@ -7,7 +7,15 @@ from src.core.utils.types import UUIDString
 
 class AbstractSessionRepository(ABC):
     @abstractmethod
-    async def create_session(self, user_id: int, ip_address: str, user_agent: str, session_name: str) -> AuthSessionInternal:
+    async def create_session(
+            self,
+            user_id: int,
+            ip_address: str,
+            user_agent: str,
+            session_name: str,
+            access_token_uuid: UUIDString,
+            refresh_token_uuid: UUIDString
+    ) -> AuthSessionInternal:
         """Create a new session with generated session ID"""
 
     @abstractmethod
@@ -17,14 +25,6 @@ class AbstractSessionRepository(ABC):
     @abstractmethod
     async def get_user_sessions(self, user_id: int) -> tuple[AuthSessionInternal, ...]:
         """Get all active sessions for user"""
-
-    @abstractmethod
-    async def rotate_session_tokens(self, session: AuthSessionInternal) -> None:
-        """Force token rotation for session"""
-
-    @abstractmethod
-    async def rotate_session_tokens_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal | None:
-        """Refresh session tokens by id"""
 
     @abstractmethod
     async def revoke_session_by_id(self, user_id: int, session_uuid: UUIDString) -> bool:

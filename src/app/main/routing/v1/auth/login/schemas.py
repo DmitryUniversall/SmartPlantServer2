@@ -14,5 +14,5 @@ class LoginRequestPayload(BaseSchema):
 class LoginResponsePayload(BaseSchema):
     user: UserPrivate
     session: AuthSessionPrivate
-    access_token: str
+    access_token: str  # TODO: Use AuthTokenPair?
     refresh_token: str

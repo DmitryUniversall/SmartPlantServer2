@@ -14,7 +14,7 @@ async def refresh_route(payload: RefreshRequestPayload, request: Request) -> App
     if request.client is None:
         raise ForbiddenHTTPException(message="Client is unknown")
 
-    auth_info = await _auth_service.refresh(
+    auth_token_pair = await _auth_service.refresh(
         current_client_ip=request.client.host,
         current_client_user_agent=request.headers.get("User-Agent", "unknown"),
         refresh_token=payload.refresh_token
@@ -22,7 +22,7 @@ async def refresh_route(payload: RefreshRequestPayload, request: Request) -> App
 
     return SuccessResponse[RefreshResponsePayload](
         data=RefreshResponsePayload(
-            access_token=auth_info.session.access_token,
-            refresh_token=auth_info.session.refresh_token
+            access_token=auth_token_pair.access_token,
+            refresh_token=auth_token_pair.refresh_token
         )
     )

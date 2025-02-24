@@ -28,7 +28,7 @@ class SessionServiceST(metaclass=ABCMeta):
         if (session := await self.get_session(payload.user_id, payload.session_uuid)) is None:
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-        if session.access_token != access_token:
+        if session.access_token_uuid != payload.token_uuid:
             raise TokenExpiredHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
         return session
@@ -39,19 +39,8 @@ class SessionServiceST(metaclass=ABCMeta):
         if (session := await self.get_session(payload.user_id, payload.session_uuid)) is None:
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-        if session.refresh_token != refresh_token:
+        if session.refresh_token_uuid != payload.token_uuid:
             raise TokenExpiredHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
-
-        return session
-
-    async def refresh_session(self, refresh_token: str) -> AuthSessionInternal:
-        session = await self.validate_refresh_token(refresh_token)
-        await self.rotate_session_tokens(session)
-        return session
-
-    async def rotate_session_tokens_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal:
-        if (session := await self._session_repository.rotate_session_tokens_by_id(user_id, session_uuid)) is None:
-            raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
         return session
 
@@ -60,14 +49,24 @@ class SessionServiceST(metaclass=ABCMeta):
         if not success:
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-    async def create_session(self, user_id: int, ip_address: str, user_agent: str, session_name: str) -> AuthSessionInternal:
-        return await self._session_repository.create_session(user_id, ip_address, user_agent, session_name)
+    async def create_session(
+            self,
+            user_id: int,
+            ip_address: str,
+            user_agent: str,
+            session_name: str,
+            access_token_uuid: UUIDString,
+            refresh_token_uuid: UUIDString
+    ) -> AuthSessionInternal:
+        return await self._session_repository.create_session(
+            user_id, ip_address, user_agent, session_name, access_token_uuid, refresh_token_uuid
+        )
 
     async def get_user_sessions(self, user_id: int) -> tuple[AuthSessionInternal, ...]:
         return await self._session_repository.get_user_sessions(user_id)
 
-    async def rotate_session_tokens(self, session: AuthSessionInternal) -> None:
-        return await self._session_repository.rotate_session_tokens(session)
+    async def update_session(self, updated_session: AuthSessionInternal) -> None:
+        await self._session_repository.update_session(updated_session)
 
     async def revoke_other_sessions(self, user_id: int, keep_session_uuid: UUIDString) -> None:
         return await self._session_repository.revoke_other_sessions(user_id, keep_session_uuid)

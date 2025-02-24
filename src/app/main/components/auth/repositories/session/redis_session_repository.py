@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 
 from src.app.main.components.auth.entities.auth_session import AuthSessionInternal
-from src.app.main.components.auth.internal_utils.jwt_tools import calculate_refresh_expire_at, create_access_token, create_refresh_token
 from src.app.main.redis import RedisClientMixin
 from src.app.main.utils.redis import convert_for_redis
 from src.core.state import project_settings
@@ -56,7 +55,7 @@ class RedisSessionRepository(RedisClientMixin, AbstractSessionRepository, metacl
         redis = await self.get_redis()
         session_key = self._get_session_key(user_id, session_uuid)
 
-        if (session_data := await redis.hgetall(session_key)) is None:  # type: ignore
+        if (session_data := await redis.hgetall(session_key)) is None or len(session_data) == 0:  # type: ignore
             return None
 
         return AuthSessionInternal.model_validate(session_data)
@@ -74,17 +73,17 @@ class RedisSessionRepository(RedisClientMixin, AbstractSessionRepository, metacl
             user_id: int,
             ip_address: str,
             user_agent: str,
-            session_name: str
+            session_name: str,
+            access_token_uuid: UUIDString,
+            refresh_token_uuid: UUIDString
     ) -> AuthSessionInternal:
         session_uuid = self.generate_session_uuid()
-        access_token = create_access_token(user_id, session_uuid)
-        refresh_token = create_refresh_token(user_id, session_uuid)
 
         session = AuthSessionInternal(
             session_uuid=session_uuid,
             user_id=user_id,
-            access_token=access_token,
-            refresh_token=refresh_token,
+            access_token_uuid=access_token_uuid,
+            refresh_token_uuid=refresh_token_uuid,
             session_name=session_name,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -101,19 +100,6 @@ class RedisSessionRepository(RedisClientMixin, AbstractSessionRepository, metacl
 
     async def get_user_sessions(self, user_id: int) -> tuple[AuthSessionInternal, ...]:
         return await self.__scan_for_user_sessions(user_id)
-
-    async def rotate_session_tokens(self, session: AuthSessionInternal) -> None:
-        session.access_token = create_access_token(session.user_id, session.session_uuid)
-        session.refresh_token = create_refresh_token(session.user_id, session.session_uuid)
-        session.expires_at = calculate_refresh_expire_at()
-        await self.update_session(session)
-
-    async def rotate_session_tokens_by_id(self, user_id: int, session_uuid: UUIDString) -> AuthSessionInternal | None:
-        if (session := await self.get_session(user_id, session_uuid)) is None:
-            return None
-
-        await self.rotate_session_tokens(session)
-        return session
 
     async def revoke_session_by_id(self, user_id: int, session_uuid: UUIDString) -> bool:
         return await self.__delete_session(user_id, session_uuid, soft=True)

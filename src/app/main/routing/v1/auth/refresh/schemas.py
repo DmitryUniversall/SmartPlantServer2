@@ -4,7 +4,7 @@ from src.app.bases.db import BaseSchema
 
 
 class RefreshRequestPayload(BaseSchema):
-    refresh_token: str = Field(..., max_length=300)
+    refresh_token: str = Field(..., max_length=1000)
 
 
 class RefreshResponsePayload(BaseSchema):
