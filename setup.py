@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from src.app.bases.db import BaseModel
 from src.app.main.db import AsyncDatabaseManagerST
-from src.app.main.routes import project_router
+from src.app.main.routing import project_router
 from src.core.loggers import LoggerBuilder
 from src.core.project_state import ProjectState
 from src.core.state import project_settings

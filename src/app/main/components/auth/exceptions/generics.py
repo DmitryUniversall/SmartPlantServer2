@@ -75,7 +75,7 @@ class AuthUserUnknownHTTPException(AuthHTTPException):
         })
 
 
-class AuthUserAlreadyExists(AuthHTTPException):
+class UserAlreadyExists(AuthHTTPException):
     def get_default_response_payload(self, **payload_kwargs) -> ApplicationResponsePayload:
         return ApplicationResponsePayload(**{
             "ok": False,

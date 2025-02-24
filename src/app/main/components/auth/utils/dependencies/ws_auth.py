@@ -2,13 +2,13 @@ import logging
 
 from starlette.websockets import WebSocket
 
+from src.app.main.components.auth.entities.auth_info import AuthInfo
 from src.app.main.components.auth.exceptions import AuthHTTPException
-from src.app.main.components.auth.models.auth_info import AuthInfo
-from src.app.main.components.auth.repository import AuthRepositoryST
+from src.app.main.components.auth.services.auth_service import AuthServiceST
 from src.app.main.components.auth.utils.bearer_auth_mixin import BearerAuthMixin
 from src.core.state import project_settings
 
-_auth_repository = AuthRepositoryST()
+_auth_service = AuthServiceST()
 _logger = logging.getLogger(__name__)
 
 
@@ -18,7 +18,7 @@ class WSJWTBearerAuthDependency(BearerAuthMixin):
 
         try:
             access_token = await self.extract_token(authorization)
-            return await _auth_repository.authenticate(access_token)
+            return await _auth_service.authenticate(access_token)
         except AuthHTTPException as error:
             await websocket.close(
                 code=error.payload.application_status_code,
