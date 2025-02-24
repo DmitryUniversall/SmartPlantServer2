@@ -1,9 +1,7 @@
-from typing import Any, TYPE_CHECKING, Sequence
+from typing import Any, Sequence
 
 from src.app.bases.db import BaseModel
-
-if TYPE_CHECKING:
-    from .base import BaseRepository
+from .abc import DBPaginateable
 
 
 class LazyPaginator[_modelT: BaseModel]:
@@ -14,17 +12,17 @@ class LazyPaginator[_modelT: BaseModel]:
 
     def __init__(
             self,
-            repository: 'BaseRepository[_modelT, Any]',
+            paginateable: DBPaginateable[_modelT],
             filters: dict[str, Any],
             per_page: int,
             depth: int,
             order_by: Sequence[str] | None = None,
     ) -> None:
         """
-        Initialize the paginator with resource and pagination settings.
+        Initialize the paginator with repository and pagination settings.
 
-        :param repository: `BaseRepository[_modelT, Any]`
-            The resource to paginate, typically a class that provides methods like `get_page` and `count`.
+        :param paginateable: `DBPaginateable[_modelT]`
+            The object to be paginated.
 
         :param filters: `dict[str, Any]`
             The filter conditions to apply when fetching records.
@@ -39,7 +37,7 @@ class LazyPaginator[_modelT: BaseModel]:
             The optional ordering criteria for the results.
         """
 
-        self._resource: 'BaseRepository[_modelT, Any]' = repository
+        self._paginateable: DBPaginateable[_modelT] = paginateable
         self._filters: dict[str, Any] = filters
         self._per_page: int = per_page
         self._depth: int = depth
@@ -56,7 +54,7 @@ class LazyPaginator[_modelT: BaseModel]:
         """
 
         if self._total is None:
-            self._total = await self._resource.count(**self._filters)
+            self._total = await self._paginateable.count(**self._filters)
 
         return self._total
 
@@ -71,7 +69,7 @@ class LazyPaginator[_modelT: BaseModel]:
             The fetched records corresponding to the page.
         """
 
-        return await self._resource.get_page(self._filters, page, self._per_page, self._depth, self._order_by)
+        return await self._paginateable.get_page(self._filters, page, self._per_page, self._depth, self._order_by)
 
     async def __aiter__(self):
         """

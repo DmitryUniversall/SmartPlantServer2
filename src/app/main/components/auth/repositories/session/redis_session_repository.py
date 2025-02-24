@@ -4,16 +4,16 @@ from datetime import datetime
 
 from src.app.main.components.auth.entities.auth_session import AuthSessionInternal
 from src.app.main.components.auth.internal_utils.jwt_tools import calculate_refresh_expire_at, create_access_token, create_refresh_token
-from src.app.main.components.auth.repositories.user.user_repository import UserRepositoryST
 from src.app.main.redis import RedisClientMixin
 from src.app.main.utils.redis import convert_for_redis
 from src.core.state import project_settings
 from src.core.utils.singleton import ABCSingletonMeta
 from src.core.utils.types import UUIDString
 from .abc import AbstractSessionRepository
+from ...services.user import UserServiceST
 
 _logger = logging.getLogger(__name__)
-_user_resource = UserRepositoryST()
+_user_service = UserServiceST()
 
 
 class RedisSessionRepository(RedisClientMixin, AbstractSessionRepository, metaclass=ABCSingletonMeta):

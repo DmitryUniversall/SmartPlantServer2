@@ -23,7 +23,7 @@ class SessionServiceST(metaclass=ABCMeta):
         return session
 
     async def validate_access_token(self, access_token: str) -> AuthSessionInternal:
-        payload = await decode_access_token_with_http_exceptions(access_token)
+        payload = decode_access_token_with_http_exceptions(access_token)
 
         if (session := await self.get_session(payload.user_id, payload.session_uuid)) is None:
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)
@@ -34,7 +34,7 @@ class SessionServiceST(metaclass=ABCMeta):
         return session
 
     async def validate_refresh_token(self, refresh_token: str) -> AuthSessionInternal:
-        payload = await decode_refresh_token_with_http_exceptions(refresh_token)
+        payload = decode_refresh_token_with_http_exceptions(refresh_token)
 
         if (session := await self.get_session(payload.user_id, payload.session_uuid)) is None:
             raise InvalidSessionHTTPException(status_code=HTTPStatus.UNAUTHORIZED)

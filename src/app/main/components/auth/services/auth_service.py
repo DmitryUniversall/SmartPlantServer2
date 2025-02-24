@@ -27,8 +27,7 @@ class AuthServiceST(metaclass=SingletonMeta):
 
     async def _get_user_by_id(self, user_id: int) -> UserInternal:
         try:
-            user_model = await self._user_service.get_user_by_id(user_id)
-            return user_model.to_schema(UserInternal)
+            return await self._user_service.get_user_by_id(user_id)
         except UserModel.DoesNotExist:
             raise AuthUserUnknownHTTPException()
 
@@ -41,15 +40,13 @@ class AuthServiceST(metaclass=SingletonMeta):
 
     async def _register_user(self, username: str, password: str, **field) -> UserInternal:
         try:
-            user_model = await self._user_service.create_user(username, password, **field)
-            return user_model.to_schema(scheme_cls=UserInternal)
+            return await self._user_service.create_user(username, password, **field)
         except UniqueConstraintFailed as error:
             raise UserAlreadyExists(status_code=HTTPStatus.CONFLICT) from error
 
     async def _login_user(self, username: str, password: str, **fields) -> UserInternal:
         try:
-            user_model = await self._user_service.get_by_auth_credentials(username=username, password=password, **fields)
-            return user_model.to_schema(scheme_cls=UserInternal)
+            return await self._user_service.get_by_auth_credentials(username=username, password_raw=password, **fields)
         except UserModel.DoesNotExist as error:
             raise WrongAuthCredentialsHTTPException(status_code=HTTPStatus.UNAUTHORIZED) from error
 

@@ -45,7 +45,7 @@ class BaseModel[_schemaT: BaseSchema](Base, metaclass=CustomModelMeta):  # type:
         Fields that should be excluded from Pydantic schemas.
 
     - `__pk_field__`: `str`
-        Primary key field name that can be used in resources etc.
+        Primary key field name that can be used in repositories.
     """
 
     __abstract__: bool = True

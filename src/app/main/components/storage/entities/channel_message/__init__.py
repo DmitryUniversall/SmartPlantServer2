@@ -1,3 +1,3 @@
 from .model import StorageChannelMessageModel
-from .schemas import StorageChannelMessage  # MUST BE BEFORE RESOURCE
+from .schemas import StorageChannelMessage
 from .types import StorageChannelMessageCreateTD

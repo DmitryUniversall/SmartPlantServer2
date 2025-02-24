@@ -9,12 +9,12 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.strategy_options import _AbstractLoad
 
 from src.app.bases.db import BaseModel, AbstractAsyncDatabaseManager
-from src.app.bases.repositories.lazy_paginator import LazyPaginator
+from .pagination import LazyPaginator, DBPaginateable
 
 
-class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
+class BaseRepository[_modelT: BaseModel, _pkT: Any](DBPaginateable, ABC):
     """
-    Base class for managing database resources.
+    Base class for managing database entity.
     Provides common CRUD operations along with advanced filtering, ordering, relationship loading, bulk operations, and lazy pagination.
     """
 
@@ -22,17 +22,17 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
     @abstractmethod
     def __model_cls__(self) -> type[_modelT]:
         """
-        Return the model class for this resource.
+        Return the model class for this repository.
 
         :return: `type[_modelT]`
-            The model class associated with this resource.
+            The model class associated with this repository.
         """
 
     @property
     @abstractmethod
     def __db_manager__(self) -> AbstractAsyncDatabaseManager:
         """
-        Return the database manager instance used by this resource.
+        Return the database manager instance used by this repository.
 
         :return: `AbstractAsyncDatabaseManager`
             The database manager for handling database operations.
@@ -505,7 +505,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
 
     async def _bulk_update(self, session: AsyncSession, filters: dict[str, Any], update_data: dict[str, Any]) -> int:
         """
-        Perform a bulk update of records matching filters.
+        Perform a bulk update of record matching filters.
 
         :param session: `AsyncSession`
             The database session.
@@ -534,7 +534,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
 
     async def _count(self, session: AsyncSession, filters: dict[str, Any]) -> int:
         """
-        Count the number of records matching filters.
+        Count the number of record matching filters.
 
         :param session: `AsyncSession`
             The database session.
@@ -553,7 +553,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
 
     async def _exists(self, session: AsyncSession, filters: dict[str, Any]) -> bool:
         """
-        Check if a record matching filters exists.
+        Check if record matching filters exist.
 
         :param session: `AsyncSession`
             The database session.
@@ -617,7 +617,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
         """
 
         return LazyPaginator(
-            repository=self,
+            paginateable=self,
             filters=filters,
             order_by=order_by,
             per_page=per_page,
@@ -723,7 +723,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
         Raises an exception if no record is found.
 
         :param depth: `int`
-            The depth of related data to fetch. Defaults to 0.
+            The depth of related data to fetch.
 
         :param order_by: `Sequence[str] | None`
             (Optional) list of fields to order the results by.
@@ -756,7 +756,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
         Fetch multiple records based on filters, with optional pagination and ordering.
 
         :param depth: int
-            The depth of related data to fetch. Defaults to 0.
+            The depth of related data to fetch.
 
         :param __limit__: `int | None`
             (Optional) limit for the number of records to fetch.
@@ -791,7 +791,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
         Raise an exception if no records are found.
 
         :param depth: `int`
-            The depth level for related object fetching. Defaults to 0.
+            The depth level for related object fetching.
 
         :param __limit__: `int | None`
             The maximum number of records to fetch. Defaults to None.
@@ -1012,7 +1012,7 @@ class BaseRepository[_modelT: BaseModel, _pkT: Any](ABC):
 
     async def count(self, **filters) -> int:
         """
-        Count the number of records matching filters.
+        Count the number of record matching filters.
 
         :param filters: `dict[str, Any]`
             The filter conditions for counting the records.

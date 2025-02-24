@@ -10,7 +10,7 @@ from .. import BaseRepository
 
 class ObservableRepository[_modelT: BaseModel, _pkT: Any](BaseRepository[_modelT, _pkT], ABC):
     """
-    An observable resource extends BaseRepository to provide event notifications.
+    An observable repository extends BaseRepository to provide event notifications.
     You can register listeners for events (using the `listen` decorator)
     that will be called before/after create, update, or delete operations.
     """
@@ -22,11 +22,11 @@ class ObservableRepository[_modelT: BaseModel, _pkT: Any](BaseRepository[_modelT
 
     def listen(self, event_type: RepositoryEventType) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
-        Decorator to register a listener for a specific resource event.
+        Decorator to register a listener for a specific repository event.
 
         Example:
 
-            @resource.listen(ResourceEventType.PRE_CREATE)
+            @repository.listen(ResourceEventType.PRE_CREATE)
             async def on_pre_create(*, model_obj):
                 ...
         """

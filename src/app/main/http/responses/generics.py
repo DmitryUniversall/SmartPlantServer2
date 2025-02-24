@@ -16,7 +16,7 @@ class SuccessResponse[_contentT: Any](GenericApplicationJsonResponse[_contentT])
 
 class CreatedResponse[_contentT: Any](GenericApplicationJsonResponse[_contentT]):
     """
-    A response indicating a resource has been successfully created with HTTP status code 201 (Created).
+    A response indicating an entity has been successfully created with HTTP status code 201 (Created).
     """
 
     default_ok = True
@@ -26,7 +26,7 @@ class CreatedResponse[_contentT: Any](GenericApplicationJsonResponse[_contentT])
 
 class UpdatedResponse[_contentT: Any](GenericApplicationJsonResponse[_contentT]):
     """
-    A response indicating that a resource has been successfully updated with HTTP status code 200 (OK).
+    A response indicating that an entity has been successfully updated with HTTP status code 200 (OK).
     """
 
     default_ok = True

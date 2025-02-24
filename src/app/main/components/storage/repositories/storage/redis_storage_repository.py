@@ -1,7 +1,6 @@
 import logging
 from typing import Unpack
 
-from src.app.main.components.storage.repositories.storage.abc import AbstractStorageRepository
 from src.app.main.components.storage.entities import (
     StorageDirectResponse,
     StorageDirectMessage,
@@ -11,6 +10,7 @@ from src.app.main.components.storage.entities import (
     StorageChannelMessageCreateTD
 )
 from src.app.main.components.storage.entities.channel_message import StorageChannelMessage
+from src.app.main.components.storage.repositories.storage.abc import AbstractStorageRepository
 from src.app.main.components.storage.services.channel_message.channel_message_service import StorageChannelMessageServiceST
 from src.app.main.redis import RedisClientMixin
 from src.core.exceptions import IllegalArgumentError
@@ -96,7 +96,7 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
         redis = await self.get_redis()
         key = self._get_channel_stream_key(message.user_id, message.channel_name)
 
-        await redis.xadd(
+        await redis.xadd(  # FIXME: redis.exceptions.ResponseError: The ID specified in XADD is equal or smaller than the target stream top item
             name=key,
             fields={"data": message.model_dump_json()},  # TODO: Should I create new dict here?
             id=f"{message.id}-0",
