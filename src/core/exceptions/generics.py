@@ -31,3 +31,7 @@ class BadVersionError(BaseApplicationError):
 
 class IllegalArgumentError(BaseApplicationError):
     pass
+
+
+class ConcurrencyError(BaseApplicationError):
+    pass

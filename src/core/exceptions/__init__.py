@@ -7,5 +7,6 @@ from .generics import (
     NotFoundError,
     AlreadyExistsError,
     BadVersionError,
-    IllegalArgumentError
+    IllegalArgumentError,
+    ConcurrencyError
 )

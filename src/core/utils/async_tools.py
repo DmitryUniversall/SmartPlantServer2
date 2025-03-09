@@ -1,4 +1,6 @@
 import asyncio
+from collections import defaultdict
+from contextlib import asynccontextmanager
 from typing import Coroutine, Callable, Any, Iterable
 
 type CoroOrFuture[_T] = Coroutine[Any, Any, _T] | asyncio.Future[_T]
@@ -125,3 +127,46 @@ async def call_after[_T](coro: CoroOrFuture[_T], *, after: float) -> asyncio.Tas
     """
 
     return asyncio.create_task(_call_after(coro, after=after))
+
+
+class NamedAsyncEvent:
+    def __init__(self) -> None:
+        self._events: defaultdict[str, asyncio.Event] = defaultdict(asyncio.Event)
+
+    def is_set(self, name: str) -> bool:
+        return self._events[name].is_set()
+
+    def set(self, name: str) -> None:
+        self._events[name].set()
+
+    def clear(self, name: str) -> None:
+        self._events[name].clear()
+
+    async def wait(self, name: str) -> None:
+        await self._events[name].wait()
+
+
+class NamedAsyncLock:
+    def __init__(self) -> None:
+        self._locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+    def is_locked(self, name: str) -> bool:
+        return name in self._locks and self._locks[name].locked()
+
+    async def acquire(self, name: str):
+        await self._locks[name].acquire()
+
+    def release(self, name: str) -> None:
+        self._locks[name].release()
+        self._locks.pop(name)
+
+    @asynccontextmanager
+    async def lock(self, name: str):
+        await self.acquire(name)
+        try:
+            yield
+        finally:
+            self.release(name)
+
+    def __call__(self, name: str):
+        return self.lock(name)

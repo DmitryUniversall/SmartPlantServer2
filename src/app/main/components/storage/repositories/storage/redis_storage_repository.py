@@ -1,5 +1,8 @@
+import asyncio
 import logging
 from typing import Unpack
+
+from redis import ResponseError
 
 from src.app.main.components.storage.entities import (
     StorageDirectResponse,
@@ -13,8 +16,10 @@ from src.app.main.components.storage.entities.channel_message import StorageChan
 from src.app.main.components.storage.repositories.storage.abc import AbstractStorageRepository
 from src.app.main.components.storage.services.channel_message.channel_message_service import StorageChannelMessageServiceST
 from src.app.main.redis import RedisClientMixin
+from src.core.exceptions import ConcurrencyError
 from src.core.exceptions import IllegalArgumentError
 from src.core.state import project_settings
+from src.core.utils.async_tools import NamedAsyncLock
 from src.core.utils.types import UUIDString
 
 _logger = logging.getLogger(__name__)
@@ -25,6 +30,7 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
         super().__init__(db=project_settings.STORAGE_REDIS_DB_ID)
 
         self._scm_service = StorageChannelMessageServiceST()
+        self._direct_listen_lock = NamedAsyncLock()
 
     def _get_user_storage_key(self, user_id: int) -> str:
         return f"storage:{user_id}"
@@ -58,14 +64,18 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
         key = key if key is not None else self._get_direct_key(message.user_id, message.target_name)
         await redis.rpush(key, message.model_dump_json())  # type: ignore
 
-        if ttl is not None:
-            await redis.expire(key, time=ttl)  # FIXME: This will delete whole list, not just this message
+        # if ttl is not None:
+        #     await redis.expire(key, time=ttl)  # FIXME: This will delete whole list, not just this message
 
     async def _send_direct_request(self, request: StorageDirectRequest, *, ttl: int | None = None, wait: bool = True) -> StorageDirectResponse | None:
         _logger.debug(f"Sending direct request {request.uuid} ({request.sender_name} -> {request.target_name})")
 
         await self._send_direct(request, ttl=ttl)
-        return await self._wait_for_direct_response(request, timeout=ttl) if wait and ttl is not None else None
+
+        try:
+            return await self._wait_for_direct_response(request, timeout=ttl) if wait and ttl is not None else None
+        except asyncio.CancelledError:
+            return None
 
     async def _send_direct_response(self, response: StorageDirectResponse, response_to_message_uuid: UUIDString, ttl: int | None = None) -> None:
         _logger.debug(f"Sending direct response to {response_to_message_uuid} ({response.sender_name} -> {response.target_name})")
@@ -77,14 +87,20 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
         redis = await self.get_redis()
         key = self._get_direct_key(user_id, device_name)
 
-        if (first := await redis.blpop([key], timeout=timeout)) is None:  # type: ignore
-            return tuple()
+        if self._direct_listen_lock.is_locked(device_name):
+            raise ConcurrencyError("Device direct is already being listened")
 
-        # TODO: Check if limit is working as planned
-        messages = [first[1]] + await redis.lrange(key, 0, limit)  # type: ignore
+        async with self._direct_listen_lock(device_name):
+            try:
+                if (first := await redis.blpop([key], timeout=timeout)) is None:  # type: ignore
+                    return tuple()
+            except asyncio.CancelledError:
+                return tuple()
 
-        await redis.delete(key)
-        return tuple(map(StorageDirectMessage.model_validate_json, messages))
+            messages = [first[1]] + await redis.lrange(key, 0, limit - 2)  # type: ignore
+
+            await redis.ltrim(key, limit - 2, -1)
+            return tuple(map(StorageDirectMessage.model_validate_json, messages))
 
     async def _write_to_channel(self, **message_data: Unpack[StorageChannelMessageCreateTD]) -> StorageChannelMessage:
         # Save to db
@@ -142,9 +158,12 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
         redis = await self.get_redis()
         key = self._get_channel_stream_key(user_id, channel_name)
 
-        info = await redis.xinfo_stream(key)
-        first_entry = info.get("first-entry")
-        last_entry = info.get("last-entry")
+        try:
+            info = await redis.xinfo_stream(key)
+            first_entry = info.get("first-entry")
+            last_entry = info.get("last-entry")
+        except ResponseError:
+            return -1, -1
 
         # If the stream is empty, these entries will be empty or None.
         if not first_entry or not last_entry:
@@ -156,21 +175,23 @@ class RedisStorageRepository(RedisClientMixin, AbstractStorageRepository):
 
     async def _listen_channel(self, user_id: int, channel_name: str, offset_id: int, limit: int, timeout: int) -> tuple[StorageChannelMessage, ...]:
         bottom_message_id, top_message_id = await self._get_redis_stream_info(user_id, channel_name)
+        try:
+            # Stream has no messages, wait for new ones
+            if top_message_id == -1:
+                return await self._wait_for_message_in_redis(user_id, channel_name, timeout)
 
-        # Stream has no messages, wait for new ones
-        if top_message_id == -1:
-            return await self._wait_for_message_in_redis(user_id, channel_name, timeout)
+            # User requested messages that are no longer in the Redis stream (expired)
+            if offset_id < bottom_message_id:
+                return await self._fetch_messages_from_db(user_id, channel_name, offset_id, limit)
 
-        # User requested messages that are no longer in the Redis stream (expired)
-        if offset_id < bottom_message_id:
-            return await self._fetch_messages_from_db(user_id, channel_name, offset_id, limit)
+            # User requested a message that does not exist yet (future message)
+            if top_message_id <= offset_id:
+                return await self._wait_for_message_in_redis(user_id, channel_name, timeout)
 
-        # User requested a message that does not exist yet (future message)
-        if top_message_id <= offset_id:
-            return await self._wait_for_message_in_redis(user_id, channel_name, timeout)
-
-        # Requested messages exist in Redis
-        return await self._fetch_messages_from_redis(user_id, channel_name, offset_id, limit)
+            # Requested messages exist in Redis
+            return await self._fetch_messages_from_redis(user_id, channel_name, offset_id, limit)
+        except asyncio.CancelledError:
+            return tuple()
 
     async def send_direct(self, message: StorageDirectMessage, *, ttl: int | None = None) -> None:
         if message.intent in (StorageDirectMessageIntent.REQUEST, StorageDirectMessageIntent.RESPONSE):

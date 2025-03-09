@@ -94,7 +94,7 @@ class AuthServiceST(metaclass=SingletonMeta):
         session = await self._session_service.validate_refresh_token(refresh_token)
         user = await self._get_user_by_id(session.user_id)
 
-        if not self.suspicious_activity_check(session, current_client_ip, current_client_user_agent):
+        if not await self.suspicious_activity_check(session, current_client_ip, current_client_user_agent):
             await self._handle_suspicious_activity(user, session)
             raise SuspiciousActivityHTTPException(status_code=HTTPStatus.FORBIDDEN)
 
